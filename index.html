@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <title>Unofficial DC Register Browser</title>
+
+        <meta name="twitter:creator" content="@JoshData" />
+
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+        <style>
+            body { padding: 1em; }
+
+            h1 { margin: 1em 0; font-weight: bold; }
+
+            #table .title { font-weight: bold; }
+            #table .links a { margin: 0 .25em; }
+        </style>
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" integrity="sha256-VBrFgheoreGl4pKmWgZh3J23pJrhNlSUOBek+8Z2Gv0=" crossorigin="anonymous">
+
+        
+    </head>
+    <body>
+
+    <div class="container">
+        <h1>Unofficial DC Register Browser</h1>
+
+        <hr>
+
+        <p>This is an unofficial website that makes it a little easier to find and view <a href="https://dcregs.dc.gov/default.aspx">District of Columbia Register Notices</a>. Use the Find tool in your browser to search the titles. A hobby project by civic hacker <a href="https://razor.occams.info">Joshua Tauberer</a>.</p>
+
+        <hr>
+
+        <table id="table" class="table">
+            <thead>
+                <tr>
+                    <th>Issue Date</th>
+                    <th>Title</th>
+                    <th>Download Links</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+
+    </div> <!-- /container -->
+
+
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+        <script>
+        $(function() {
+            $.getJSON({
+                url: "index.json",
+                success: function(res) {
+                    res.reverse();
+                    var table = $('#table tbody');
+                    res.forEach(function(item) {
+                        var tr = $("<tr><td class='date'></td> <td><div><a class='title'></a></div> <div><span class='category'></span> &middot; <span class='subcategory'></span> &middot; <span class='agency'></span> </div></td> <td class='links'></td></tr>");
+                        table.append(tr);
+                        tr.find('.date').text(item.issueDate);
+                        tr.find('.title').text(item.title);
+                        tr.find('.title').attr('href', item.links[0][1]);
+                        tr.find('.category').text(item.category);
+                        tr.find('.subcategory').text(item.subcategory);
+                        tr.find('.agency').text(item.agency);
+                        item.links.forEach(function(f) {
+                            var n = $('<a/>');
+                            n.attr('href', f[1]);
+                            n.text(f[0]);
+                            tr.find('.links').append(n);
+                        });
+                    })
+                }
+            })
+        })
+        </script>
+    </body>
+</html>
