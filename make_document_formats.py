@@ -1,18 +1,12 @@
-# Scan the blobs we downloaded, whose file types are unknown,
-# and symlink the file to the appropriate extension. Then
-# run conversions to generate browser- and search-engine-
-# friendly formats.
+# Run conversions to generate browser- and search-engine-
+# friendly formats of notices.
 
-import glob
-import magic
 import os, os.path
 import subprocess
 import re
 import tempfile
 import shutil
 import tqdm
-
-mime = magic.Magic(mime=True)
 
 conversions = {
 	("doc", "txt"): lambda fn : ['lowriter', '--convert-to', 'txt:Text (encoded):UTF8', '--outdir', os.path.dirname(fn), fn],
@@ -24,41 +18,17 @@ conversions = {
 	("pdf", "txt"): lambda fn : ['pdftotext', fn],
 }
 
-for blobfn in tqdm.tqdm(glob.glob("notices/*.blob"), desc="creating symlinks"):
-	# Determine the actual file type.
-	file_type = mime.from_file(blobfn)
-	if file_type == "application/pdf":
-		ext = "pdf"
-	elif file_type == "application/msword":
-		ext = "doc"
-	elif file_type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-		ext = "docx"
-	elif file_type == "text/html":
-		ext = "html"
-	elif file_type == "text/rtf":
-		ext = "rtf"
-	elif file_type == "inode/x-empty":
-		continue # ?
-	else:
-		raise ValueError(file_type)
+# Get a list of notice documents.
+notices = [fn.replace(".blob", "")
+           for fn in os.listdir("notices")
+           if fn.endswith(".blob")]
 
-	# Create symbolic link.
-	# Note that when we OCR PDFs, we'll have a PDF file present but it
-	# won't be a symlink back to the blob file.
-	linkfn = os.path.splitext(blobfn)[0] + "." + ext
-	targetfn = os.path.basename(blobfn)
-	if os.path.islink(linkfn) and os.readlink(linkfn) != targetfn:
-		# There is a link here already and it's pointing to the wrong place.
-		os.unlink(linkfn)
-	if not os.path.exists(linkfn):
-		# There's no link or file yet, so create it.
-		os.symlink(targetfn, linkfn)
-
-
+# Process them out of order.
 import random
-blobs = list(glob.glob("notices/*.blob"))
-random.shuffle(blobs)
-for blobfn in tqdm.tqdm(blobs, desc="converting formats"):
+random.shuffle(notices)
+
+# Process each notice.
+for noticeId in tqdm.tqdm(notices, desc="converting formats"):
 	# Convert file to alternate file formats. Loop until there are no
 	# converions on a pass over all of the possible conversions we
 	# can do.
@@ -70,9 +40,10 @@ for blobfn in tqdm.tqdm(blobs, desc="converting formats"):
 		# have a file in the input format and have not yet generated
 		# (or acquired) a file in the output format.
 		for (in_format, out_format), commandfunc in conversions.items():
-			in_fn = os.path.splitext(blobfn)[0] + "." + in_format
-			out_fn = os.path.splitext(blobfn)[0] + "." + out_format
+			in_fn = "documents/" + noticeId + "." + in_format
+			out_fn = "documents/" + noticeId + "." + out_format
 			if os.path.exists(in_fn) and not os.path.exists(out_fn):
+				# Run a conversion.
 				subprocess.run(commandfunc(in_fn))
 				if not os.path.exists(out_fn):
 					print("File did not convert?", in_fn, "=>", out_format)
@@ -82,7 +53,7 @@ for blobfn in tqdm.tqdm(blobs, desc="converting formats"):
 				else:
 					did_conversion = True
 
-				# If we just converted from pdf to text and the text layer
+				# If we just converted from PDF to text and the text layer
 				# is empty, attempt to OCR the PDF and then re-convert it.
 				if (in_format, out_format) == ('pdf', 'txt') and os.stat(out_fn).st_size < 512:
 					with open(out_fn) as f:

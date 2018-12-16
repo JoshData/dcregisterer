@@ -12,19 +12,18 @@ import time
 def scrape_with_retry(f):
 	# The DC.gov website gives a lot of intermittent
 	# Connection Reset errors, so when we get that
-	# wait two seconds and then try again, up to five
-	# times, and if we get it six times then raise
-	# the error.
+	# wait a few seconds and then try again a certain
+	# number of times.
 	def g(*args, **kwargs):
 		counter = 0
 		while True:
 			try:
 				return f(*args, **kwargs)
 			except (ConnectionResetError, urllib.error.URLError):
-				time.sleep(3)
 				counter += 1
-				if counter > 6:
+				if counter > 5:
 					raise
+				time.sleep(2)
 	return g
 
 
@@ -86,21 +85,28 @@ def download_dc_register_notice2(noticeId, page):
 	if not metadata or metadata['Subject'] == "":
 		raise ValueError("Subject is empty? " + noticeId)
 
-	# Follow the "View text" link to get the text of the notice.
+	# Follow the "View text" link to get the binary content of the notice document.
 	document = download_postback(url, 'ctl00$MainContent$lnkNoticeFile', page)
 
 	# Update the metadata with the response headers of the download.
 	metadata["textHttpHeaders"] = dict(document.info())
 
-	# Save the metadata and the blob.
+	# Save the metadata.
 	os.makedirs("notices", exist_ok=True)
 	with open("notices/" + noticeId + ".yaml", "w") as f:
 		rtyaml.dump(metadata, f)
-	with open("notices/" + noticeId + ".blob", "wb") as f:
-		f.write(document.read())
 
-	# TODO: Check that the blob does not contain "Oops!!" which probably
-	# indicates we failed to actually get the file.
+	# Check that there wasn't an Oops error downloading the blob. If there was,
+	# simply don't write it to disk. Similarly if we got a blank document.
+	document = document.read()
+	if b"<h3> Oops!!  An Error Occurred." in document:
+		return metadata
+	if len(document) == 0:
+		return metadata
+
+	# Save the document to disk.
+	with open("notices/" + noticeId + ".blob", "wb") as f:
+		f.write(document)
 
 	return metadata
 
@@ -182,7 +188,8 @@ def download_dc_register_notices():
 
 		noticeids |= agency_noticeids
 
-	# Remove notices that we already have.
+	# Remove notices that we already have by looking at the directory
+	# of YAML files.
 	already_have_notice_ids = set(
 		fn.replace(".yaml", "")
 		for fn in os.listdir("notices")
@@ -192,7 +199,12 @@ def download_dc_register_notices():
 	
 	# Download notices.
 	for noticeId in tqdm.tqdm(noticeids, desc="fetching notices"):
-		download_dc_register_notice(noticeId)
+		try:
+			download_dc_register_notice(noticeId)
+		except Exception as e:
+			print("Error downloading", "https://dcregs.dc.gov/Common/NoticeDetail.aspx?noticeId=" + noticeId)
+			print(e)
+			print()
 
 #download_dc_register_notice("N0072841")
 #download_all_mayors_orders()

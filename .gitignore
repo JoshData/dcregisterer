@@ -1,4 +1,5 @@
 __pycache__
-notices/
-cache/
+notices
+documents
+cache
 index.json

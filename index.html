@@ -1,49 +1,44 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-    <head>
-        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
-        <title>Unofficial DC Register Browser</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
 
-        <meta name="twitter:creator" content="@JoshData" />
+    <title>Unofficial DC Register Browser</title>
 
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+    <meta name="twitter:creator" content="@JoshData" />
 
-        <style>
-            body { padding: 1em; }
+    <style>
+        body { padding: 1em; }
 
-            h1 { margin: 1em 0; font-weight: bold; }
+        h1 { margin: 1em 0; font-weight: bold; }
 
-            #table .title { font-weight: bold; }
-            #table .links a { margin: 0 .25em; }
-        </style>
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css" integrity="sha256-VBrFgheoreGl4pKmWgZh3J23pJrhNlSUOBek+8Z2Gv0=" crossorigin="anonymous">
-
-        
-    </head>
-    <body>
+        #table .title { font-weight: bold; }
+        #table .links a { margin: 0 .25em; }
+    </style>
+  </head>
+  <body>
 
     <div class="container">
         <h1>Unofficial DC Register Browser</h1>
 
         <hr>
 
-        <p>This is an unofficial website that makes it a little easier to find and view <a href="https://dcregs.dc.gov/default.aspx">District of Columbia Register Notices</a>. Use the Find tool in your browser to search the titles. A hobby project by civic hacker <a href="https://razor.occams.info">Joshua Tauberer</a>.</p>
+        <p>This is an unofficial website that makes it a little easier to find and view <a href="https://dcregs.dc.gov/default.aspx">District of Columbia Register Notices</a>. Use the Find tool in your browser to search the titles. A hobby project by civic hacker <a href="https://razor.occams.info">Joshua Tauberer</a>. See <a href="https://github.com/JoshData/dcregisterer">https://github.com/JoshData/dcregisterer</a>.</p>
 
         <hr>
 
-        <p id="loading">Loading...</p>
-
-        <div id="facets">
+        <div id="facets" class="row">
         </div>
 
         <table id="table" class="table" style="display: none;">
             <thead>
                 <tr>
-                    <th>Issue Date</th>
+                    <th>Publication Date</th>
                     <th>Title</th>
                     <th>Download Links</th>
                 </tr>
@@ -52,13 +47,19 @@
             </tbody>
         </table>
 
+        <p id="loading" class='text-danger'>Loading...</p>
+
     </div> <!-- /container -->
 
 
-        <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
-        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+    <script
+        src="https://code.jquery.com/jquery-3.3.1.min.js"
+        integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+        crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/js/bootstrap.min.js" integrity="sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy" crossorigin="anonymous"></script>
 
-        <script>
+    <script>
         $(function() {
             $.getJSON({
                 url: "index.json",
@@ -77,29 +78,59 @@
             create_facet("category", "Category");
             create_facet("subcategory", "Sub-Category");
             create_facet("agency", "Agency Name");
+            create_search_field("title", "Search Title");
 
             // set initial values from URL fragment
             select_facets();
         }
 
         function create_facet(field_name, label) {
-            var facet = $("<div class=facet><div class=caption></div> <select class=items></select></div>");
+            var facet = $("<div class='col-md facet'><label/> <select class='items form-control'></select></div>");
             $('#facets').append(facet);
             facet.attr('data-field', field_name);
-            facet.find('.caption').text(label);
+            facet.find('label').text(label);
+            facet.find('label').attr('for', 'facet_' + field_name);
+            facet.find('select').attr('id', 'facet_' + field_name);
 
             // Update window hash, which will trigger hashchange, which will update the results.
             facet.find('.items').change(update_window_hash);
         }
 
+        function create_search_field(field_name, label) {
+            var facet = $("<div class='col-md facet'><label/> <input type='text' class='form-control'></div>");
+            $('#facets').append(facet);
+            facet.attr('data-field', field_name);
+            facet.find('label').text(label);
+            facet.find('label').attr('for', 'facet_' + field_name);
+            facet.find('input').attr('id', 'facet_' + field_name);
+
+            // Update window hash, which will trigger hashchange, which will update the results.
+            facet.find('input')
+              .change(update_window_hash)
+              .keyup(function() {
+                clearTimeout($.data(this, 'timer'));
+                $(this).data('timer', setTimeout(update_window_hash, 500));
+              });
+        }
+
         function get_selected_facets() {
             var facets = { };
             $('#facets > .facet').each(function() {
-                var value = $(this).find('.items').val();
-                if (value == null || value == "") return;
-                var values = [value];
-                if (values.length > 0)
-                    facets[$(this).attr('data-field')] = values;
+                // select facets
+                var value = $(this).find('select.items').val();
+                if (value != null && value != "") {
+                  var values = [value];
+                  if (values.length > 0)
+                      facets[$(this).attr('data-field')] = values;
+                }
+
+                // input facets
+                var value = $(this).find('input[type=text]').val();
+                if (value != null && value != "") {
+                  var values = [value];
+                  if (values.length > 0)
+                      facets[$(this).attr('data-field')] = values;
+                }
             });
             return facets;
         }
@@ -126,30 +157,51 @@
             // in update_facets().
             $('#facets > .facet').each(function() {
                 var value = facets[$(this).attr('data-field')];
-                var select = $(this).find('.items');
-                select.val(value);
-                if (select.val() != value) {
+                var formfield = $(this).find('select, input[type=text]');
+                formfield.val(value);
+                if (formfield.val() != value) {
                     var n = $("<option selected>");
                     n.attr("value", value);
-                    select.append(n);
+                    formfield.append(n);
                 }
             });
+        }
+
+        function is_facet_search(field) {
+            return field == "title";
+        }
+
+        function normalize_text(text) {
+            return text.toLowerCase().replace(/\s+/, ' ');
         }
 
         function matches_filters(item, facets) {
             var ret = true;
             Object.keys(facets).forEach(function(field) {
                 var val = facets[field];
-                if (val != null && item[field] != val[0]) {
+                if (val == null) return;
+                if (is_facet_search(field) && normalize_text(item[field]).indexOf(normalize_text(val[0])) == -1)
                     ret = false;
-                }
+                if (!is_facet_search(field) && item[field] != val[0])
+                    ret = false;
             });
             return ret;
         }
 
         function show_results() {
-            update_facets();
-            update_table();
+            // Show indicator.
+            $('#loading').text("Loading...").show();
+
+            // Clear old results.
+            var table = $('#table tbody');
+            table.text('');
+
+            // Do the update on a separate tick so that the
+            // above UI changes happen.
+            setTimeout(function() {
+              update_facets();
+              update_table();
+            }, 1);
         }
 
         function update_facets() {
@@ -187,22 +239,33 @@
         }
 
         function update_table() {
-            var table = $('#table tbody');
-            table.text('');
-
-            // If no facets are selected, show nothing, because there are too many
-            // results to show without any filtering.
+            // Check how many matching documents there are. We can't
+            // display more than like 1,000 before the browser becomes
+            // too slow.
             var facets = get_selected_facets();
-            if (facets.length == 0)
-                return;
-
             var count = 0;
+            window.database.forEach(function(item) {
+                if (!matches_filters(item, facets))
+                    return;
+                count++;
+            });
+            if (count > 5000) {
+              $('#loading').text("Please narrow your search so we can display some matching notices.");
+              return;
+            }
+
+            if (count == 0) {
+              $('#loading').text("No notices matched your search.");
+              return;
+            }
+
+            var table = $('#table tbody');
             window.database.forEach(function(item) {
                 if (!matches_filters(item, facets))
                     return;
                 var tr = $("<tr><td class='date'></td> <td><div><a class='title'></a></div> <div><span class='category'></span> &middot; <span class='subcategory'></span> &middot; <span class='agency'></span> </div></td> <td class='links'></td></tr>");
                 table.append(tr);
-                tr.find('.date').text(item.issueDate);
+                tr.find('.date').text(item.pubDate.str.replace(/ .*/, ''));
                 tr.find('.title').text(item.title);
                 tr.find('.title').attr('href', item.links[0][1]);
                 tr.find('.category').text(item.category);
@@ -214,13 +277,12 @@
                     n.text(f[0]);
                     tr.find('.links').append(n);
                 });
-                count++;
             })
 
             // on first load
             $('#table').show();
             $('#loading').hide();
         }
-        </script>
-    </body>
+    </script>
+  </body>
 </html>
