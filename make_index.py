@@ -4,9 +4,10 @@ import glob
 import rtyaml
 import os.path
 import json
+import tqdm
 
 table = []
-for fn in sorted(glob.glob("notices/*.yaml")):
+for fn in tqdm.tqdm(sorted(glob.glob("notices/*.yaml"))):
 	# Load metadata.
 	with open(fn) as f:
 		metadata = rtyaml.load(f)

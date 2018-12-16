@@ -1,5 +1,7 @@
 # Scan the blobs we downloaded, whose file types are unknown,
-# and symlink the file to the appropriate extension.
+# and symlink the file to the appropriate extension. Then
+# run conversions to generate browser- and search-engine-
+# friendly formats.
 
 import glob
 import magic
@@ -8,6 +10,7 @@ import subprocess
 import re
 import tempfile
 import shutil
+import tqdm
 
 mime = magic.Magic(mime=True)
 
@@ -21,7 +24,7 @@ conversions = {
 	("pdf", "txt"): lambda fn : ['pdftotext', fn],
 }
 
-for blobfn in glob.glob("notices/*.blob"):
+for blobfn in tqdm.tqdm(glob.glob("notices/*.blob"), desc="creating symlinks"):
 	# Determine the actual file type.
 	file_type = mime.from_file(blobfn)
 	if file_type == "application/pdf":
@@ -51,6 +54,11 @@ for blobfn in glob.glob("notices/*.blob"):
 		# There's no link or file yet, so create it.
 		os.symlink(targetfn, linkfn)
 
+
+import random
+blobs = list(glob.glob("notices/*.blob"))
+random.shuffle(blobs)
+for blobfn in tqdm.tqdm(blobs, desc="converting formats"):
 	# Convert file to alternate file formats. Loop until there are no
 	# converions on a pass over all of the possible conversions we
 	# can do.
@@ -66,7 +74,13 @@ for blobfn in glob.glob("notices/*.blob"):
 			out_fn = os.path.splitext(blobfn)[0] + "." + out_format
 			if os.path.exists(in_fn) and not os.path.exists(out_fn):
 				subprocess.run(commandfunc(in_fn))
-				did_conversion = True
+				if not os.path.exists(out_fn):
+					print("File did not convert?", in_fn, "=>", out_format)
+					print(" ".join(commandfunc(in_fn)))
+					print()
+					continue
+				else:
+					did_conversion = True
 
 				# If we just converted from pdf to text and the text layer
 				# is empty, attempt to OCR the PDF and then re-convert it.

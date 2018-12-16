@@ -146,7 +146,6 @@ def download_dc_register_notices():
 
 	# Get the agency list.
 	url = "https://dcregs.dc.gov/default.aspx"
-	print(url + "...")
 	page = download_url(url)
 	dom = lxml.html.fromstring(page)
 	agencies = dom.xpath("//select[@id='MainContent_ddlDcmrAgency']/option")

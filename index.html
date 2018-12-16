@@ -35,7 +35,12 @@
 
         <hr>
 
-        <table id="table" class="table">
+        <p id="loading">Loading...</p>
+
+        <div id="facets">
+        </div>
+
+        <table id="table" class="table" style="display: none;">
             <thead>
                 <tr>
                     <th>Issue Date</th>
@@ -58,27 +63,164 @@
             $.getJSON({
                 url: "index.json",
                 success: function(res) {
-                    res.reverse();
-                    var table = $('#table tbody');
-                    res.forEach(function(item) {
-                        var tr = $("<tr><td class='date'></td> <td><div><a class='title'></a></div> <div><span class='category'></span> &middot; <span class='subcategory'></span> &middot; <span class='agency'></span> </div></td> <td class='links'></td></tr>");
-                        table.append(tr);
-                        tr.find('.date').text(item.issueDate);
-                        tr.find('.title').text(item.title);
-                        tr.find('.title').attr('href', item.links[0][1]);
-                        tr.find('.category').text(item.category);
-                        tr.find('.subcategory').text(item.subcategory);
-                        tr.find('.agency').text(item.agency);
-                        item.links.forEach(function(f) {
-                            var n = $('<a/>');
-                            n.attr('href', f[1]);
-                            n.text(f[0]);
-                            tr.find('.links').append(n);
-                        });
-                    })
+                    res.reverse(); // reverse chron order
+                    window.database = res;
+                    create_ui();
+                    show_results();
+                    $(window).on('hashchange', function() { show_results(); });
                 }
+            });
+        });
+
+        function create_ui() {
+            // create facets
+            create_facet("category", "Category");
+            create_facet("subcategory", "Sub-Category");
+            create_facet("agency", "Agency Name");
+
+            // set initial values from URL fragment
+            select_facets();
+        }
+
+        function create_facet(field_name, label) {
+            var facet = $("<div class=facet><div class=caption></div> <select class=items></select></div>");
+            $('#facets').append(facet);
+            facet.attr('data-field', field_name);
+            facet.find('.caption').text(label);
+
+            // Update window hash, which will trigger hashchange, which will update the results.
+            facet.find('.items').change(update_window_hash);
+        }
+
+        function get_selected_facets() {
+            var facets = { };
+            $('#facets > .facet').each(function() {
+                var value = $(this).find('.items').val();
+                if (value == null || value == "") return;
+                var values = [value];
+                if (values.length > 0)
+                    facets[$(this).attr('data-field')] = values;
+            });
+            return facets;
+        }
+
+        function update_window_hash() {
+            var facets = get_selected_facets();
+            window.location = "#" + Object.keys(facets).map(function(key) {
+                return encodeURIComponent(key) + "=" + encodeURIComponent(facets[key]); }).join("&");
+        }
+
+        function select_facets() {
+            // Parse URL fragment.
+            var facets = { };
+            window.location.hash.substring(1).split("&").forEach(function(key_value) {
+                key_value = key_value.split("=");
+                key_value[0] = decodeURIComponent(key_value[0]);
+                key_value[1] = decodeURIComponent(key_value[1]);
+                facets[key_value[0]] = key_value[1];
+            });
+
+            // Apply to UI. Because results may not be shown yet, or some values
+            // are hidden, we create <option>s if they are not yet present in
+            // <select>s. The option will be replaced with one that has a label
+            // in update_facets().
+            $('#facets > .facet').each(function() {
+                var value = facets[$(this).attr('data-field')];
+                var select = $(this).find('.items');
+                select.val(value);
+                if (select.val() != value) {
+                    var n = $("<option selected>");
+                    n.attr("value", value);
+                    select.append(n);
+                }
+            });
+        }
+
+        function matches_filters(item, facets) {
+            var ret = true;
+            Object.keys(facets).forEach(function(field) {
+                var val = facets[field];
+                if (val != null && item[field] != val[0]) {
+                    ret = false;
+                }
+            });
+            return ret;
+        }
+
+        function show_results() {
+            update_facets();
+            update_table();
+        }
+
+        function update_facets() {
+            // Create options for each facet.
+            $('#facets > .facet').each(function() {
+                // Get selected facets *except* for this field.
+                var facetdiv = $(this);
+                var field = facetdiv.attr('data-field');
+                var facets = get_selected_facets();
+                delete facets[field];
+
+                // Get value counts for this facet.
+                var values = { };
+                window.database.forEach(function(item) {
+                    if (!matches_filters(item, facets))
+                        return;
+                    values[item[field]] = (values[item[field]] || 0) + 1;
+                });
+            
+                // Restore selected option at the end.
+                var prev_value = $(this).find('.items').val();
+
+                // Create options.
+                var sorted_values = Object.keys(values).sort(function(a,b){return values[b]-values[a]})
+                $(this).find('.items').text('');
+                facetdiv.find('.items').append($('<option>'));
+                sorted_values.forEach(function(value) {
+                    var n = $('<option>')
+                    n.attr('value', value);
+                    n.text(value + " (" + values[value] + ")");
+                    facetdiv.find('.items').append(n);
+                });
+                $(this).find('.items').val(prev_value); // restore previous selection
+            });
+        }
+
+        function update_table() {
+            var table = $('#table tbody');
+            table.text('');
+
+            // If no facets are selected, show nothing, because there are too many
+            // results to show without any filtering.
+            var facets = get_selected_facets();
+            if (facets.length == 0)
+                return;
+
+            var count = 0;
+            window.database.forEach(function(item) {
+                if (!matches_filters(item, facets))
+                    return;
+                var tr = $("<tr><td class='date'></td> <td><div><a class='title'></a></div> <div><span class='category'></span> &middot; <span class='subcategory'></span> &middot; <span class='agency'></span> </div></td> <td class='links'></td></tr>");
+                table.append(tr);
+                tr.find('.date').text(item.issueDate);
+                tr.find('.title').text(item.title);
+                tr.find('.title').attr('href', item.links[0][1]);
+                tr.find('.category').text(item.category);
+                tr.find('.subcategory').text(item.subcategory);
+                tr.find('.agency').text(item.agency);
+                item.links.forEach(function(f) {
+                    var n = $('<a/>');
+                    n.attr('href', f[1]);
+                    n.text(f[0]);
+                    tr.find('.links').append(n);
+                });
+                count++;
             })
-        })
+
+            // on first load
+            $('#table').show();
+            $('#loading').hide();
+        }
         </script>
     </body>
 </html>
